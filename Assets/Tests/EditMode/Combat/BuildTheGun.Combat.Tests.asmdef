@@ -1,0 +1,13 @@
+{
+  "name": "BuildTheGun.Combat.Tests",
+  "rootNamespace": "BuildTheGun.Combat.Tests",
+  "references": [
+    "BuildTheGun.Combat",
+    "UnityEngine.TestRunner",
+    "UnityEditor.TestRunner"
+  ],
+  "includePlatforms": [
+    "Editor"
+  ],
+  "testAssemblies": true
+}
