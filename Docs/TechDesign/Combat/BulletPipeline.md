@@ -252,7 +252,8 @@ public enum StatCategory
 {
     BaseDamage,        // 기본 피해 (flat +N, 동종 가산)
     DamageIncrease,    // 피해 증가 (+30%, 동종 가산)
-    PelletCount,       // 발사량/연발 (+1, 가산)
+    PelletCount,       // 발사량/연발 +N (동종 가산)
+    PelletMultiplier,  // 연발 ×2 등 배율 (동종 곱; 스택 비면 1)
 }
 ```
 
@@ -280,15 +281,24 @@ public class StatResolver
 
         float damageIncrease = Sum(buffs, StatCategory.DamageIncrease);
 
-        int pelletCount = bullet.MergedBasePelletCount
-                        + Sum(buffs, StatCategory.PelletCount);
+        int pelletAdditive = bullet.MergedBasePelletCount
+                           + Sum(buffs, StatCategory.PelletCount)
+                           + bullet.RuntimeModifiers.Sum(StatCategory.PelletCount)
+                           + gun.BattleModifiers.Sum(StatCategory.PelletCount)
+                           + slot.SlotModifiers.Sum(StatCategory.PelletCount);
+
+        float pelletMult = bullet.RuntimeModifiers.Product(StatCategory.PelletMultiplier)
+                         * gun.BattleModifiers.Product(StatCategory.PelletMultiplier)
+                         * slot.SlotModifiers.Product(StatCategory.PelletMultiplier);
 
         float finalDamage = baseDamage * (1f + damageIncrease);
+
+        int pelletCount = Mathf.Max(1, Mathf.FloorToInt(pelletAdditive * pelletMult));
 
         return new FinalStats
         {
             Damage = finalDamage,
-            PelletCount = Mathf.Max(1, pelletCount),
+            PelletCount = pelletCount,
         };
     }
 }
@@ -306,6 +316,8 @@ BulletSpec.BaseDamage (또는 합체 시 MergedBaseDamage)
 
 카테고리 간 승산: BaseDamage × (1 + DamageIncrease)
 = 최종 피해
+
+연발: PelletCount 가산 합 → PelletMultiplier Product → FloorToInt(버림) → 최종 PelletCount
 ```
 
 ### 딜레이 공식
@@ -380,7 +392,7 @@ public static class BulletMergeResolver
         foreach (var effect in primary.AllEffects.Concat(secondary.AllEffects))
         {
             if (effect.Trigger == TriggerType.OnMerge)
-                ExecuteMergeTimeEffect(effect, merged);
+                ExecuteMergeTimeEffect(effect, merged); // → EffectSystem.Execute (EffectSystem.md §2)
             else
                 merged.MergedEffects.Add(effect);
         }
@@ -405,4 +417,4 @@ Merged: damage=18, pellet=3, delay=0.5
 ### OnMerge 트리거
 
 합체 시점에만 실행되는 특수 효과 (예: "합체 총알 딜레이 제거", "합체 시 특수 효과").
-`BulletMergeResolver.Merge()` 내부에서 처리한다.
+`BulletMergeResolver.Merge()` 내부에서 **`EffectSystem.Execute`**로 처리한다 (`EffectSystem.md` §2 규약). 

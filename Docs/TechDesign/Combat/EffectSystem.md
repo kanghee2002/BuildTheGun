@@ -33,7 +33,7 @@ public enum EffectType
 
     // 조건부 효과
     ThresholdDamageBoost, // 문턱 조건 피해 증가 (강화 총알 3개 이상 등)
-    LowHPDamageBoost,    // 적 저체력 시 피해 증가
+    HighHPDamageBoost,   // 적 고체력(90% 이상) 시 피해 증가
     ShotCountDamage,      // 탄창 내 발사 수 비례 피해
 
     // 상태 효과 (Phase 2)
@@ -77,6 +77,13 @@ public interface IEffectHandler
 }
 ```
 
+### EffectSystem — 실행 진입점(규약)
+
+- 파이프라인· **외부 코드는 `IEffectHandler`를 직접 호출하지 않는다.** 레지스트리를 거치는 **`EffectSystem.Execute(EffectSpec spec, EffectContext ctx)`**(또는 동등 API) 한 경로만 사용한다.
+- **`IEffectHandler.Execute` / `CanExecute`는 `EffectSystem` 구현 내부에서만** 호출된다(핸들러 클래스의 `Execute` 메서드는 인터페이스 구현일 뿐, 외부 진입점이 아니다).
+- **`EffectSystem.Execute` 구현은 내부에서** 대응 핸들러를 찾은 뒤 **`CanExecute`가 false면 부수 효과 없이 반환**(no-op)한다. 호출자가 매번 `CanExecute`를 따로 부를 필요는 없다.
+- 단위 테스트에서 특정 핸들러만 검증할 때는 예외적으로 핸들러를 직접 호출할 수 있다.
+
 ### 새 효과 추가 워크플로우
 
 1. `EffectType` enum에 추가
@@ -106,6 +113,8 @@ public class RandomPelletHandler : IEffectHandler
     }
 }
 ```
+
+위 `Execute`는 **인터페이스 구현**이며, 런타임에서는 **`EffectSystem`이 `EffectType.RandomPellet`에 대해 이 핸들러의 `Execute`를 호출**한다.
 
 BuffAccumulator와 StatResolver는 항상 **확정된 값**만 받는다.
 동적 계산은 전부 Handler 내부에서 해결한다.

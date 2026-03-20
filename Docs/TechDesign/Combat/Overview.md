@@ -1,7 +1,7 @@
 # 아키텍처 개요
 
 > 이 문서는 총·총알 시스템의 전체 아키텍처를 정의합니다.  
-> 개별 시스템의 상세 설계는 각 문서(`GunSystem.md`, `CardPipeline.md`, `EffectSystem.md`)를 참고합니다.
+> 개별 시스템의 상세 설계는 각 문서(`GunSystem.md`, `BulletPipeline.md`, `EffectSystem.md`, `RelicSystem.md`)를 참고합니다.
 >
 > 용어 기준: 게임 내 “총알”은 시스템/데이터 레벨에서 **Bullet**로 통일한다.
 
@@ -26,7 +26,7 @@ CombatOrchestrator (전투 루프 제어, 시스템 간 협업 조율)
  │    │    └── MagazineState[] ── MagazineSlot[] ── BulletState
  │    └── IGunBehavior (총기별 Strategy)
  │
- ├── BulletResolutionPipeline ──→ 상세: CardPipeline.md
+ ├── BulletResolutionPipeline ──→ 상세: BulletPipeline.md
  │    ├── BuffAccumulator (버프 수집/분배)
  │    ├── SlotConditionEvaluator (슬롯 조건 평가)
  │    └── StatResolver (최종 스탯 계산)
@@ -34,6 +34,8 @@ CombatOrchestrator (전투 루프 제어, 시스템 간 협업 조율)
  ├── EffectSystem ──────────────→ 상세: EffectSystem.md
  │    ├── IEffectHandler Registry (효과 핸들러 등록소)
  │    └── ProjectileHitProcessor (투사체 적중 처리)
+ │
+ ├── RelicEventBridge / 유물 패시브 적용 ──→ 상세: RelicSystem.md
  │
  ├── CombatEventBus (이벤트 전파)
  │
@@ -100,7 +102,9 @@ CombatOrchestrator
    └── PermanentValues = RunPersistentData에서 로드 (영구 효과만)
 4. CombatEventBus 초기화
 5. CombatCounterManager 초기화 (Permanent 카운터만 복원)
-6. 유물 효과를 EventBus에 등록
+6. 유물 (`RelicSystem.md`):
+   ├── 패시브 → `GunState.BattleModifiers` 등에 반영
+   └── 이벤트형 → `RelicEventBridge`가 EventBus에 구독 등록
 ```
 
 **핵심**: State를 **새로 생성**하는 것이지, 이전 State에서 버프를 "제거"하는 것이 아니다. 이를 통해 "버프 해제 누락" 버그를 원천 차단한다.
